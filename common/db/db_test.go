@@ -447,3 +447,86 @@ func TestMisconfigureClientAKS(t *testing.T) {
 	_, err = configureClient(*toolOptions)
 	require.Error(t, err)
 }
+
+func TestConfigureClientOIDCHumanFlow(t *testing.T) {
+	testtype.SkipUnlessTestType(t, testtype.UnitTestType)
+
+	enabled := options.EnabledOptions{
+		Auth:       true,
+		Connection: true,
+		Namespace:  true,
+		URI:        true,
+	}
+
+	toolOptions := options.New("test", "", "", "", true, enabled)
+	_, err := toolOptions.ParseArgs(
+		[]string{
+			"--uri",
+			"mongodb://test.net/?directConnection=true&tls=true&authMechanism=MONGODB-OIDC",
+		},
+	)
+	require.NoError(t, err)
+
+	client, err := configureClient(*toolOptions)
+	require.NoError(t, err)
+	require.NotNil(t, client)
+	assert.Equal(t, "MONGODB-OIDC", toolOptions.Mechanism)
+}
+
+func TestConfigureClientOIDCHumanFlowWithRedirectURI(t *testing.T) {
+	testtype.SkipUnlessTestType(t, testtype.UnitTestType)
+
+	enabled := options.EnabledOptions{
+		Auth:       true,
+		Connection: true,
+		Namespace:  true,
+		URI:        true,
+	}
+
+	toolOptions := options.New("test", "", "", "", true, enabled)
+	_, err := toolOptions.ParseArgs(
+		[]string{
+			"--uri",
+			"mongodb://test.net/?directConnection=true&tls=true&authMechanism=MONGODB-OIDC",
+			"--oidcRedirectUri",
+			"http://localhost:27099/callback",
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "http://localhost:27099/callback", toolOptions.OIDCRedirectURI)
+
+	client, err := configureClient(*toolOptions)
+	require.NoError(t, err)
+	require.NotNil(t, client)
+}
+
+func TestConfigureClientAzureSkipsHumanFlow(t *testing.T) {
+	testtype.SkipUnlessTestType(t, testtype.UnitTestType)
+
+	enabled := options.EnabledOptions{
+		Auth:       true,
+		Connection: true,
+		Namespace:  true,
+		URI:        true,
+	}
+
+	t.Setenv("AZURE_APP_CLIENT_ID", "test")
+	t.Setenv("AZURE_IDENTITY_CLIENT_ID", "test")
+	t.Setenv("AZURE_TENANT_ID", "test")
+	t.Setenv("AZURE_FEDERATED_TOKEN_FILE", "test")
+	toolOptions := options.New("test", "", "", "", true, enabled)
+	_, err := toolOptions.ParseArgs(
+		[]string{
+			"--uri",
+			"mongodb://test.net/?directConnection=true&tls=true&authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:azure",
+		},
+	)
+	require.NoError(t, err)
+
+	// Azure machine flow should be used; human callback must not be set.
+	client, err := configureClient(*toolOptions)
+	require.NoError(t, err)
+	require.NotNil(t, client)
+	// OIDCHumanCallback being nil is validated indirectly: if both callbacks were
+	// set the driver would reject the credential, causing configureClient to fail.
+}

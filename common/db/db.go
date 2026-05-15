@@ -472,7 +472,8 @@ func configureClient(opts options.ToolOptions) (*mongo.Client, error) {
 			cred.AuthMechanism = cs.AuthMechanism
 			cred.AuthMechanismProperties = cs.AuthMechanismProperties
 		case "MONGODB-OIDC":
-			if env, ok := cs.AuthMechanismProperties["ENVIRONMENT"]; ok && env == "azure" {
+			env := cs.AuthMechanismProperties["ENVIRONMENT"]
+			if env == "azure" {
 				_, okApp := os.LookupEnv("AZURE_APP_CLIENT_ID")
 				_, okClient := os.LookupEnv("AZURE_IDENTITY_CLIENT_ID")
 				_, okTenant := os.LookupEnv("AZURE_TENANT_ID")
@@ -487,7 +488,11 @@ func configureClient(opts options.ToolOptions) (*mongo.Client, error) {
 						"must set all of AZURE_TENANT_ID, AZURE_APP_CLIENT, AZURE_IDENTITY_CLIENT_ID, " +
 							"and AZURE_FEDERATED_TOKEN_FILE for Azure Kubernetes Service")
 				}
+			} else if env == "" {
+				// No ENVIRONMENT property → interactive human auth-code flow.
+				cred.OIDCHumanCallback = makeHumanCallback(opts.OIDCRedirectURI)
 			}
+			// else: gcp / k8s / test → driver's built-in machine flow, no custom callback.
 			cred.Username = cs.Username
 			// Password is never used
 			cred.AuthSource = cs.AuthSource

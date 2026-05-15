@@ -179,6 +179,7 @@ type Auth struct {
 	Source          string `long:"authenticationDatabase" value-name:"<database-name>" description:"database that holds the user's credentials"`
 	Mechanism       string `long:"authenticationMechanism" value-name:"<mechanism>" description:"authentication mechanism to use"`
 	AWSSessionToken string `long:"awsSessionToken" value-name:"<aws-session-token>" description:"session token to authenticate via AWS IAM"`
+	OIDCRedirectURI string `long:"oidcRedirectUri" value-name:"<uri>" description:"redirect URI for OIDC human authentication (default: http://localhost:0/callback)"`
 }
 
 // Struct for Kerberos/GSSAPI-specific options.
