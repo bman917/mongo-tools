@@ -22,6 +22,10 @@ jobs:
             os-name: windows-amd64
 
     steps:
+      - name: Enable long paths (Windows)
+        if: runner.os == 'Windows'
+        run: git config --global core.longpaths true
+
       - uses: actions/checkout@v4
 
       - name: Set up Go
