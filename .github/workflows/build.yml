@@ -18,6 +18,8 @@ jobs:
             os-name: macos-amd64
           - runner: ubuntu-latest
             os-name: linux-amd64
+          - runner: windows-latest
+            os-name: windows-amd64
 
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +37,7 @@ jobs:
         run: go run build.go build
 
       - name: Archive binaries
+        shell: bash
         run: |
           mkdir -p dist
           cd bin
