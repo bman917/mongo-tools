@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os-name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: macos-14
+            os-name: macos-arm64
+          - runner: macos-13
+            os-name: macos-amd64
+          - runner: ubuntu-latest
+            os-name: linux-amd64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install Kerberos (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libkrb5-dev
+
+      - name: Build
+        run: go run build.go build
+
+      - name: Archive binaries
+        run: |
+          mkdir -p dist
+          cd bin
+          tar -czf ../dist/mongo-tools-${{ matrix.os-name }}.tar.gz *
+          cd ..
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mongo-tools-${{ matrix.os-name }}
+          path: dist/mongo-tools-${{ matrix.os-name }}.tar.gz
+          retention-days: 30
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create or update latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          prerelease: true
+          files: dist/*.tar.gz
